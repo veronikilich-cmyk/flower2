@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Цветущий Гибискус</title>
+
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+
+  <style>
+      :root {
+      --primary: #D35400;
+      --secondary: #F7DC6F;
+      --bg-color: #FFFACD;
+      --text-color: #4a3b32;
+      --btn-bg: #D35400;
+      --btn-text: #FFFACD;
+      --btn-hover: #b04500;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      text-align: center;
+      padding: 20px 0;
+      width: 100%;
+      background: linear-gradient(180deg, #da7c1f 0%, #f99a3c00 100%);
+      position: absolute;
+      top: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+      color: var(--secondary);
+    }
+    p {
+      margin-top: 8px;
+      font-size: 1.1rem;
+      color: #F7DC6F;
+      letter-spacing: 0.5px;
+    }
+    .viewer-container {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #ff8597 0%, #f2d293 100%);
+      --poster-color: transparent;
+      transition: background 0.5s ease;
+    }
+    model-viewer::part(default-ar-button) {
+      bottom: 120px; 
+      right: 20px;
+    }
+    .controls-panel {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+      z-index: 20;
+    }
+    .btn {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: 2px solid transparent;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 40px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(211, 84, 0, 0.4);
+      transition: all 0.3s ease;
+      font-family: inherit;
+      min-width: 180px;
+    }
+    .btn:hover:not(:disabled) {
+      background: var(--btn-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(211, 84, 0, 0.6);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .btn.active {
+      background: var(--secondary);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 20px rgba(247, 220, 111, 0.8);
+    }
+    .anim-status {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
+      color: #FFFACD;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      z-index: 20;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .anim-status.visible {
+      opacity: 1;
+    }
+    [slot="poster"] {
+      color: #4a3b32;
+      font-style: italic;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Цветущий Гибискус</h1>
+    <p>Наведи камеру или покрути модель</p>
+  </header>
+
+  <div class="viewer-container">
+    <model-viewer 
+      id="hibiscusViewer"
+      src="hibiscus.glb" 
+      alt="3D модель цветущего гибискуса"
+      camera-controls 
+      ar 
+      ar-modes="webxr scene-viewer quick-look"
+      shadow-intensity="1.2"
+      environment-image="neutral"
+      exposure="1.2"
+      camera-orbit="70deg 70deg 2m"
+      camera-target="0.0m -0.2m 0"
+      min-camera-orbit="auto auto 0.4m"
+      max-camera-orbit="auto auto 3m"
+      touch-action="pan-y"
+      animation-name="*"
+      interaction-prompt="none"
+      animation-crossfade-duration="1000">
+      
+      <div slot="poster" style="display: flex; justify-content: center; align-items: center; height: 100%;">
+        Распускаем лепестки...
+      </div>
+    </model-viewer>
+
+    <div id="animStatus" class="anim-status"></div>
+
+    <div class="controls-panel">
+      <button id="toggleBtn" class="btn" disabled>Выкл</button>
+      <button id="btnGlow" class="btn">Свечение</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const viewer = document.getElementById('hibiscusViewer');
+      const toggleBtn = document.getElementById('toggleBtn');
+      const btnGlow = document.getElementById('btnGlow');
+      const statusDiv = document.getElementById('animStatus');
+
+      const SLOW_SPEED = 0.4; // Замедление
+
+      function showStatus(text, isVisible = true) {
+        statusDiv.textContent = text;
+        statusDiv.classList.toggle('visible', isVisible);
+      }
+
+      // Запуск анимации в режиме пинг-понга
+      function playPingPong() {
+        viewer.timeScale = SLOW_SPEED;
+        viewer.play({
+          repetitions: Infinity, // Бесконечно
+          pingpong: true         // Вперёд и назад
+        });
+      }
+
+      viewer.addEventListener('load', () => {
+        const animations = viewer.availableAnimations || [];
+        if (animations.length > 0) {
+          toggleBtn.disabled = false;
+          playPingPong(); // Запускаем сразу с нужными настройками
+          updateButtonState(false);
+          setTimeout(() => showStatus('', false), 3000);
+        } else {
+          toggleBtn.disabled = true;
+        }
+      });
+
+      viewer.addEventListener('play', () => updateButtonState(false));
+      viewer.addEventListener('pause', () => updateButtonState(true));
+
+      function updateButtonState(isPaused) {
+        if (isPaused) {
+          toggleBtn.textContent = 'Вкл';
+        } else {
+          toggleBtn.textContent = 'Выкл';
+        }
+      }
+
+      toggleBtn.addEventListener('click', () => {
+        if (viewer.paused) {
+          playPingPong();
+        } else {
+          viewer.pause();
+        }
+      });
+
+      let isGlowing = false;
+      btnGlow.addEventListener('click', () => {
+        isGlowing = !isGlowing;
+        if (isGlowing) {
+          viewer.exposure = 1.6;
+          viewer.style.background = 'radial-gradient(circle at center, #ff4d6d 0%, #ffb347 100%)';
+          btnGlow.textContent = 'Обычно';
+          btnGlow.classList.add('active');
+        } else {
+          viewer.exposure = 1.2;
+          viewer.style.background = 'radial-gradient(circle at center, #ff8597 0%, #f2d293 100%)';
+          btnGlow.textContent = 'Свечение';
+          btnGlow.classList.remove('active');
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
